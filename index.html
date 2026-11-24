@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bargeld</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bargeld">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* VOICE: ruhig, sachlich, wie ein gut gesetzter Kontoauszug.
+   IDEA: ein Kassenbuch, eine große Zahl oben, darunter sauber linierte Zeilen.
+   PICTURE: der Bargeldstand selbst, groß in Serifen.
+   COLOUR and TYPE: Weiß, Tinte, ein tiefes Petrol als einziger Akzent; Systemschriften, offline.
+   LAYOUT: eine Spalte, Zahl, zwei Knöpfe, Buchungen nach Tagen. */
+:root{
+  --bg:#ffffff;--ink:#14161a;--muted:#6b7075;--rule:#e7e9ea;--panel:#f5f6f6;
+  --teal:#0b5d63;--teal-ink:#ffffff;--warn:#9a4b2f;
+  --serif:ui-serif,"New York","Iowan Old Style",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0d1416;--ink:#e8ecec;--muted:#8c9799;--rule:#1f2b2d;--panel:#131d1f;
+  --teal:#5fb8b4;--teal-ink:#0d1416;--warn:#e39a7c;color-scheme:dark}}
+:root[data-theme=dark]{
+  --bg:#0d1416;--ink:#e8ecec;--muted:#8c9799;--rule:#1f2b2d;--panel:#131d1f;
+  --teal:#5fb8b4;--teal-ink:#0d1416;--warn:#e39a7c;color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--sans);overflow-x:clip;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  font-variant-numeric:tabular-nums}
+.wrap{max-width:560px;margin:0 auto;padding:12px 18px 48px}
+button,input,textarea{font:inherit;color:inherit}
+
+.top{display:flex;align-items:center;justify-content:space-between;position:relative;min-height:44px}
+.top h1{margin:0;font-size:15px;font-weight:600;color:var(--muted)}
+.icon{width:44px;height:44px;border:0;background:none;border-radius:22px;font-size:22px;line-height:1;cursor:pointer;color:var(--ink)}
+.icon:focus-visible,.btn:focus-visible,.chip:focus-visible,.row:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+#menu{position:absolute;right:0;top:46px;z-index:5;background:var(--bg);border:1px solid var(--rule);border-radius:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.12);padding:6px;min-width:200px}
+#menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:12px 14px;border-radius:10px;min-height:44px;cursor:pointer}
+#menu button:active{background:var(--panel)}
+
+.hero{padding:22px 0 22px;border-bottom:1px solid var(--ink)}
+.lbl{margin:0;font-size:14px;color:var(--muted)}
+.bal{margin:4px 0 2px;font:500 clamp(46px,15vw,68px)/1.05 var(--serif);letter-spacing:-.02em;white-space:nowrap}
+.bal.neg{color:var(--warn)}
+.sub{margin:0;font-size:15px;color:var(--muted)}
+.acts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:20px}
+.btn{min-height:48px;border-radius:12px;border:1px solid var(--rule);background:var(--panel);padding:10px 14px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:var(--teal-ink)}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted);font-weight:500}
+.btn.danger{color:var(--warn);background:none;border-color:transparent}
+.btn:active{transform:scale(.98)}
+
+.note{margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--panel);display:flex;gap:10px;align-items:center;font-size:15px}
+.note span{flex:1}
+.note .btn{min-height:40px;padding:6px 12px}
+
+.day{margin:22px 0 0}
+.day h2{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--muted);display:flex;justify-content:space-between}
+.row{display:flex;align-items:baseline;gap:12px;width:100%;border:0;border-bottom:1px solid var(--rule);background:none;
+  padding:13px 0;text-align:left;cursor:pointer;min-height:48px}
+.row .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .k{font-size:13px;color:var(--muted);margin-left:6px}
+.row .a{white-space:nowrap;font-weight:500}
+.row .a.in{color:var(--teal)}
+.row .a.adj{color:var(--muted)}
+.empty{margin:40px 0;color:var(--muted);text-align:center}
+
+dialog{border:0;border-radius:18px;padding:20px;width:min(520px,calc(100vw - 24px));background:var(--bg);color:var(--ink);
+  box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(10,15,16,.45)}
+dialog h3{margin:0 0 14px;font-size:18px}
+.field{display:block;margin:0 0 12px}
+.field>span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=password],input[type=date],textarea{width:100%;min-height:46px;border:1px solid var(--rule);border-radius:10px;
+  background:var(--panel);padding:10px 12px;font-size:16px;outline:none}
+input:focus,textarea:focus{border-color:var(--teal)}
+textarea{min-height:90px;font:13px/1.4 ui-monospace,Menlo,monospace;resize:vertical}
+.amount{font:500 34px/1.1 var(--serif)!important;text-align:right;min-height:60px!important}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+.chips:empty{display:none}
+.chip{border:1px solid var(--rule);background:none;border-radius:999px;padding:7px 12px;min-height:36px;cursor:pointer;font-size:15px}
+.actions{display:flex;gap:8px;align-items:center;margin-top:6px}
+.actions .sp{flex:1}
+.hint{font-size:14px;color:var(--muted);margin:0 0 12px}
+.diff{font-size:15px;margin:-4px 0 12px;min-height:22px}
+.sec{border-top:1px solid var(--rule);padding-top:14px;margin-top:14px}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;margin:-4px 0 8px;font-size:15px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--teal)}
+.err{color:var(--warn);font-size:14px;margin:0 0 10px;min-height:0}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;display:flex;gap:14px;align-items:center;
+  transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;min-height:36px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}.btn:active{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Bargeld</h1>
+    <button class="icon" id="menuBtn" type="button" aria-label="Menü" aria-expanded="false">⋯</button>
+    <div id="menu" hidden>
+      <button type="button" id="checkBtn">Stand prüfen</button>
+      <button type="button" id="backupBtn">Sicherung</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <p class="lbl">Im Portemonnaie</p>
+    <p class="bal" id="bal">0,00 €</p>
+    <p class="sub" id="monthSum"></p>
+    <div class="acts">
+      <button class="btn primary" id="outBtn" type="button">− Ausgabe</button>
+      <button class="btn" id="inBtn" type="button">+ Abgehoben</button>
+    </div>
+  </section>
+
+  <div class="note" id="backupNote" hidden><span id="backupNoteText"></span><button class="btn" id="backupNow" type="button">Sichern</button></div>
+
+  <div id="list"></div>
+  <p class="empty" id="empty" hidden>Noch nichts eingetragen.<br>Starte mit „+ Abgehoben“ oder „Stand prüfen“ im Menü.</p>
+</div>
+
+<dialog id="entryDlg">
+  <form id="entryForm" autocomplete="off">
+    <h3 id="entryTitle">Ausgabe</h3>
+    <label class="field"><span>Betrag in €</span>
+      <input id="fAmount" class="amount" type="text" inputmode="decimal" placeholder="0,00" enterkeyhint="next"></label>
+    <label class="field"><span id="fTextLbl">Wofür?</span>
+      <input id="fText" type="text" maxlength="120" placeholder="z. B. Bäcker" enterkeyhint="done"></label>
+    <div class="chips" id="chips"></div>
+    <label class="field"><span>Datum</span><input id="fDate" type="date"></label>
+    <p class="err" id="entryErr" hidden></p>
+    <div class="actions">
+      <button class="btn danger" id="delBtn" type="button" hidden>Löschen</button>
+      <span class="sp"></span>
+      <button class="btn ghost" id="entryCancel" type="button">Abbrechen</button>
+      <button class="btn primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="checkDlg">
+  <form id="checkForm" autocomplete="off">
+    <h3>Stand prüfen</h3>
+    <p class="hint">Zähl dein Bargeld und trag ein, was wirklich da ist. Die Differenz wird als Korrektur gebucht.</p>
+    <label class="field"><span>Gerade im Portemonnaie, in €</span>
+      <input id="cAmount" class="amount" type="text" inputmode="decimal" placeholder="0,00"></label>
+    <p class="diff" id="cDiff"></p>
+    <div class="actions"><span class="sp"></span>
+      <button class="btn ghost" id="checkCancel" type="button">Abbrechen</button>
+      <button class="btn primary" type="submit">Übernehmen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="backupDlg">
+  <h3>Sicherung</h3>
+  <p class="hint">Die Datei wird mit deinem Passwort verschlüsselt (AES-256). Ohne Passwort kann sie niemand lesen, auch du nicht. Schreib es dir gut auf.</p>
+  <div id="savedPw" hidden>
+    <p class="hint">✓ Dein Sicherungs-Passwort ist auf diesem Gerät hinterlegt.</p>
+    <p class="err" id="quickErr" hidden></p>
+    <div class="actions"><button class="btn ghost" type="button" id="newPwBtn">Neues Passwort</button><span class="sp"></span>
+      <button class="btn primary" type="button" id="quickExport">Jetzt sichern</button></div>
+  </div>
+  <form id="exportForm" autocomplete="off">
+    <label class="field"><span>Passwort (mind. 8 Zeichen, besser 12+)</span><input id="pw1" type="password" autocomplete="new-password"></label>
+    <label class="field"><span>Passwort wiederholen</span><input id="pw2" type="password" autocomplete="new-password"></label>
+    <label class="check"><input type="checkbox" id="remember" checked> Auf diesem Gerät merken</label>
+    <p class="err" id="exportErr" hidden></p>
+    <div class="actions"><button class="btn ghost" type="button" id="cancelNewPw" hidden>Zurück</button><span class="sp"></span><button class="btn primary" type="submit" id="exportBtn">Verschlüsseln &amp; sichern</button></div>
+  </form>
+  <div id="copyBox" hidden>
+    <p class="hint" style="margin-top:12px">Falls kein Speichern-Fenster kam: Text kopieren und z. B. als Notiz oder Datei in iCloud ablegen. Er ist verschlüsselt.</p>
+    <textarea id="copyText" readonly></textarea>
+    <div class="actions"><span class="sp"></span><button class="btn" type="button" id="copyBtn">Text kopieren</button></div>
+  </div>
+  <form id="importForm" class="sec" autocomplete="off">
+    <label class="field"><span>Wiederherstellen aus Datei</span>
+      <button class="btn" type="button" id="pickFile" style="width:100%">Datei wählen</button>
+      <input id="importFile" type="file" accept=".json,application/json,text/plain" hidden></label>
+    <label class="field"><span>… oder verschlüsselten Text einfügen</span><textarea id="importText" placeholder="{&quot;app&quot;:&quot;bargeld&quot;, …}"></textarea></label>
+    <label class="field"><span>Passwort</span><input id="pwIn" type="password" autocomplete="current-password"></label>
+    <p class="err" id="importErr" hidden></p>
+    <div class="actions"><button class="btn ghost" type="button" id="backupClose">Schließen</button><span class="sp"></span>
+      <button class="btn primary" type="submit" id="importBtn">Wiederherstellen</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+{
+  "use strict";
+  const KEY = "bargeld.entries.v1", META = "bargeld.meta.v1", ITER = 600000, DAY = 864e5;
+  const $ = id => document.getElementById(id);
+  const read = (k, f) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch (e) { return f; } };
+  let entries = read(KEY, []); if (!Array.isArray(entries)) entries = [];
+  const meta = Object.assign({ lastBackup: 0 }, read(META, {}));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) { toast("Speichern fehlgeschlagen. Bitte sichern!"); } };
+  const saveMeta = () => { try { localStorage.setItem(META, JSON.stringify(meta)); } catch (e) {} };
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+  // ---------- Hilfen ----------
+  const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+  const money = c => eur.format(c / 100);
+  const signed = c => (c > 0 ? "+" : c < 0 ? "−" : "") + eur.format(Math.abs(c) / 100);
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const today = () => iso(new Date());
+  const parseDay = s => { const p = s.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  function parseAmount(s) {
+    s = String(s || "").replace(/[\s€]/g, "");
+    if (!s) return NaN;
+    if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+    if (!/^\d+(\.\d{0,2})?$/.test(s)) return NaN;
+    const c = Math.round(Number(s) * 100);
+    return c >= 0 && c < 1e9 ? c : NaN;
+  }
+  const centsInput = c => (c / 100).toFixed(2).replace(".", ",");
+  const delta = e => e.kind === "in" ? e.cents : e.kind === "out" ? -e.cents : e.cents;
+  const balance = () => entries.reduce((s, e) => s + delta(e), 0);
+  const fmtDay = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "numeric", month: "long" });
+  const fmtDayY = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+  const fmtMonth = new Intl.DateTimeFormat("de-DE", { month: "long" });
+  function dayLabel(s) {
+    const d = parseDay(s), t = parseDay(today()), diff = Math.round((t - d) / DAY);
+    if (diff === 0) return "Heute";
+    if (diff === 1) return "Gestern";
+    return (d.getFullYear() === t.getFullYear() ? fmtDay : fmtDayY).format(d);
+  }
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  // ---------- Darstellung ----------
+  function render() {
+    const b = balance();
+    $("bal").textContent = money(b);
+    $("bal").classList.toggle("neg", b < 0);
+    const m = today().slice(0, 7);
+    const spent = entries.filter(e => e.kind === "out" && e.date.slice(0, 7) === m).reduce((s, e) => s + e.cents, 0);
+    $("monthSum").textContent = "Im " + fmtMonth.format(new Date()) + " ausgegeben: " + money(spent);
+
+    const sorted = entries.slice().sort((a, c) => c.date.localeCompare(a.date) || c.createdAt - a.createdAt);
+    const groups = [];
+    sorted.forEach(e => { const g = groups[groups.length - 1]; if (g && g.date === e.date) g.items.push(e); else groups.push({ date: e.date, items: [e] }); });
+    const list = $("list");
+    list.replaceChildren(...groups.map(g => {
+      const sec = el("section", "day");
+      const h = el("h2"); h.append(el("span", null, dayLabel(g.date)));
+      const out = g.items.filter(e => e.kind === "out").reduce((s, e) => s + e.cents, 0);
+      if (out) h.append(el("span", null, "−" + money(out)));
+      sec.append(h);
+      g.items.forEach(e => {
+        const r = el("button", "row"); r.type = "button";
+        const t = el("span", "t", e.text);
+        if (e.kind === "in") t.append(el("span", "k", "abgehoben"));
+        if (e.kind === "adj") t.append(el("span", "k", "Korrektur"));
+        r.append(t, el("span", "a " + e.kind, signed(delta(e))));
+        r.addEventListener("click", () => openEntry(e.kind === "adj" ? "adj" : e.kind, e));
+        sec.append(r);
+      });
+      return sec;
+    }));
+    $("empty").hidden = entries.length > 0;
+
+    const days = meta.lastBackup ? Math.floor((Date.now() - meta.lastBackup) / DAY) : null;
+    const need = entries.length > 0 && (days === null || days >= 30);
+    $("backupNote").hidden = !need;
+    if (need) $("backupNoteText").textContent = days === null ? "Noch keine Sicherung gemacht." : "Letzte Sicherung vor " + days + " Tagen.";
+  }
+
+  // ---------- Menü ----------
+  const menu = $("menu");
+  const setMenu = open => { menu.hidden = !open; $("menuBtn").setAttribute("aria-expanded", String(open)); };
+  $("menuBtn").addEventListener("click", e => { e.stopPropagation(); setMenu(menu.hidden); });
+  document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) setMenu(false); });
+  const show = d => { setMenu(false); d.showModal ? d.showModal() : d.setAttribute("open", ""); };
+
+  // ---------- Eintrag ----------
+  let mode = "out", editing = null;
+  function openEntry(kind, e) {
+    mode = kind; editing = e || null;
+    $("entryTitle").textContent = (e ? "Bearbeiten: " : "") + (kind === "in" ? "Abgehoben" : kind === "adj" ? "Korrektur" : "Ausgabe");
+    $("fTextLbl").textContent = kind === "out" ? "Wofür?" : "Notiz";
+    $("fText").placeholder = kind === "in" ? "Abhebung" : kind === "adj" ? "Korrektur" : "z. B. Bäcker";
+    $("fAmount").value = e ? centsInput(Math.abs(e.cents)) : "";
+    $("fText").value = e ? e.text : "";
+    $("fDate").value = e ? e.date : today();
+    $("delBtn").hidden = !e;
+    $("entryErr").hidden = true;
+    if (kind === "adj") $("fAmount").placeholder = "Betrag (Vorzeichen bleibt)";
+    else $("fAmount").placeholder = "0,00";
+    chips();
+    show($("entryDlg"));
+    if (!e) setTimeout(() => $("fAmount").focus(), 60);
+  }
+  function chips() {
+    const q = $("fText").value.trim().toLowerCase(), box = $("chips");
+    if (mode !== "out") { box.replaceChildren(); return; }
+    const count = new Map();
+    entries.forEach(e => { if (e.kind === "out") { const k = e.text; count.set(k, (count.get(k) || 0) + 1); } });
+    let names = [...count.keys()].sort((a, b) => count.get(b) - count.get(a));
+    if (q) names = names.filter(n => n.toLowerCase() !== q && n.toLowerCase().includes(q))
+      .sort((a, b) => (b.toLowerCase().startsWith(q) - a.toLowerCase().startsWith(q)) || count.get(b) - count.get(a));
+    box.replaceChildren(...names.slice(0, 5).map(n => {
+      const c = el("button", "chip", n); c.type = "button";
+      c.addEventListener("click", () => { $("fText").value = n; chips(); if (!$("fAmount").value) $("fAmount").focus(); });
+      return c;
+    }));
+  }
+  $("fText").addEventListener("input", chips);
+  $("outBtn").addEventListener("click", () => openEntry("out"));
+  $("inBtn").addEventListener("click", () => openEntry("in"));
+  $("entryCancel").addEventListener("click", () => $("entryDlg").close());
+  $("entryForm").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const c = parseAmount($("fAmount").value);
+    if (!(c > 0)) { $("entryErr").textContent = "Bitte einen Betrag eingeben, z. B. 3,50."; $("entryErr").hidden = false; return; }
+    const text = $("fText").value.trim().replace(/\s+/g, " ") || (mode === "in" ? "Abhebung" : mode === "adj" ? "Korrektur" : "Ohne Notiz");
+    const date = /^\d{4}-\d{2}-\d{2}$/.test($("fDate").value) ? $("fDate").value : today();
+    if (editing) {
+      editing.cents = mode === "adj" ? (editing.cents < 0 ? -c : c) : c;
+      editing.text = text; editing.date = date;
+    } else entries.push({ id: uid(), kind: mode, cents: c, text, date, createdAt: Date.now() });
+    save(); render(); $("entryDlg").close();
+  });
+  $("delBtn").addEventListener("click", () => {
+    if (!editing) return;
+    const i = entries.indexOf(editing), gone = editing;
+    if (i < 0) return;
+    entries.splice(i, 1); save(); render(); $("entryDlg").close();
+    toast("Gelöscht", "Rückgängig", () => { entries.splice(Math.min(i, entries.length), 0, gone); save(); render(); });
+  });
+
+  // ---------- Stand prüfen ----------
+  function checkDiff() {
+    const c = parseAmount($("cAmount").value), out = $("cDiff");
+    if (isNaN(c)) { out.textContent = ""; return NaN; }
+    const d = c - balance();
+    out.textContent = d === 0 ? "Passt genau. 👍" : "Differenz: " + signed(d) + (d < 0 ? " (fehlt)" : " (mehr da)");
+    return d;
+  }
+  $("checkBtn").addEventListener("click", () => { $("cAmount").value = ""; $("cDiff").textContent = "Aktuell laut App: " + money(balance()); show($("checkDlg")); setTimeout(() => $("cAmount").focus(), 60); });
+  $("cAmount").addEventListener("input", checkDiff);
+  $("checkCancel").addEventListener("click", () => $("checkDlg").close());
+  $("checkForm").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const d = checkDiff();
+    if (isNaN(d)) { $("cAmount").focus(); return; }
+    if (d !== 0) { entries.push({ id: uid(), kind: "adj", cents: d, text: "Stand geprüft", date: today(), createdAt: Date.now() }); save(); render(); }
+    $("checkDlg").close();
+    toast(d === 0 ? "Stand stimmt" : "Korrektur gebucht: " + signed(d));
+  });
+
+  // ---------- Verschlüsselung ----------
+  const b64 = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+  async function keyFrom(pw, salt, iter) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  // Gemerkter Schlüssel: nicht auslesbar, liegt nur in IndexedDB dieses Geräts
+  const idb = () => new Promise((res, rej) => { const r = indexedDB.open("bargeld", 1); r.onupgradeneeded = () => r.result.createObjectStore("keys"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  async function idbDo(mode, fn) { const db = await idb(); return new Promise((res, rej) => { const tx = db.transaction("keys", mode), q = fn(tx.objectStore("keys")); tx.oncomplete = () => res(q && q.result); tx.onerror = () => rej(tx.error); }); }
+  const getSaved = () => idbDo("readonly", s => s.get("export")).catch(() => null);
+  const setSaved = v => idbDo("readwrite", s => s.put(v, "export"));
+  async function encrypt(obj, key, salt) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(obj))));
+    return JSON.stringify({ app: "bargeld", format: 1, cipher: "AES-256-GCM", kdf: "PBKDF2-SHA256", iter: ITER, salt: b64(salt), iv: b64(iv), data: b64(ct) });
+  }
+  async function decrypt(text, pw) {
+    let p; try { p = JSON.parse(text); } catch (e) { throw new Error("Das ist keine Bargeld-Sicherung."); }
+    if (!p || p.app !== "bargeld" || !p.data) throw new Error("Das ist keine Bargeld-Sicherung.");
+    const iter = Math.min(Math.max(Number(p.iter) || ITER, 100000), 5000000);
+    try {
+      const key = await keyFrom(pw, unb64(p.salt), iter);
+      const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(p.iv) }, key, unb64(p.data));
+      return JSON.parse(new TextDecoder().decode(pt));
+    } catch (e) { throw new Error("Passwort falsch oder Datei beschädigt."); }
+  }
+  const err = (id, msg) => { $(id).textContent = msg || ""; $(id).hidden = !msg; };
+  const busy = (id, on, label) => { const b = $(id); b.disabled = on; if (label) b.textContent = label; };
+
+  $("backupBtn").addEventListener("click", openBackup);
+  $("backupNow").addEventListener("click", openBackup);
+  let saved = null;
+  function pwMode(useSaved) {
+    $("savedPw").hidden = !useSaved; $("exportForm").hidden = useSaved;
+    $("cancelNewPw").hidden = !saved || useSaved;
+  }
+  async function openBackup() {
+    ["pw1", "pw2", "pwIn", "importText"].forEach(id => $(id).value = "");
+    pickedText = ""; $("pickFile").textContent = "Datei wählen";
+    $("copyBox").hidden = true; err("exportErr"); err("importErr"); err("quickErr");
+    saved = await getSaved();
+    pwMode(!!saved);
+    show($("backupDlg"));
+  }
+  $("newPwBtn").addEventListener("click", () => { pwMode(false); $("pw1").focus(); });
+  $("cancelNewPw").addEventListener("click", () => pwMode(true));
+  $("backupClose").addEventListener("click", () => $("backupDlg").close());
+  $("quickExport").addEventListener("click", async () => {
+    err("quickErr"); busy("quickExport", true, "Verschlüssele …");
+    try { await deliver(await encrypt(payload(), saved.key, saved.salt)); }
+    catch (e) { err("quickErr", "Das hat nicht geklappt. Leg bitte ein neues Passwort fest."); }
+    busy("quickExport", false, "Jetzt sichern");
+  });
+  const payload = () => ({ version: 1, exportedAt: new Date().toISOString(), entries });
+  $("exportForm").addEventListener("submit", async ev => {
+    ev.preventDefault(); err("exportErr");
+    const a = $("pw1").value, b = $("pw2").value;
+    if (a.length < 8) return err("exportErr", "Das Passwort braucht mindestens 8 Zeichen.");
+    if (a !== b) return err("exportErr", "Die Passwörter sind nicht gleich.");
+    if (!window.crypto || !crypto.subtle) return err("exportErr", "Verschlüsselung geht hier nicht (nur über https).");
+    busy("exportBtn", true, "Verschlüssele …");
+    try {
+      const salt = crypto.getRandomValues(new Uint8Array(16)), key = await keyFrom(a, salt, ITER);
+      if ($("remember").checked) {
+        try { await setSaved({ key, salt }); saved = { key, salt }; } catch (e) { toast("Merken ging nicht, Sicherung läuft trotzdem"); }
+      } else { try { await idbDo("readwrite", s => s.delete("export")); saved = null; } catch (e) {} }
+      await deliver(await encrypt(payload(), key, salt));
+      if (saved) pwMode(true);
+    } catch (e) { err("exportErr", "Das hat nicht geklappt. Bitte nochmal versuchen."); }
+    busy("exportBtn", false, "Verschlüsseln & sichern");
+    $("pw1").value = ""; $("pw2").value = "";
+  });
+  async function deliver(text) {
+    {
+      const name = "bargeld-sicherung-" + today() + ".json";
+      $("copyText").value = text; $("copyBox").hidden = false;
+      let file = null; try { file = new File([text], name, { type: "application/json" }); } catch (e) {}
+      let shared = false;
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); shared = true; } catch (e) { if (e && e.name === "AbortError") shared = null; }
+      }
+      if (shared === false) {
+        try { const u = URL.createObjectURL(new Blob([text], { type: "application/json" })); const l = document.createElement("a"); l.href = u; l.download = name; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000); } catch (e) {}
+      }
+      if (shared !== null) { meta.lastBackup = Date.now(); saveMeta(); render(); toast("Sicherung erstellt"); }
+    }
+  }
+  $("copyBtn").addEventListener("click", () => {
+    const t = $("copyText");
+    const done = () => { meta.lastBackup = Date.now(); saveMeta(); render(); toast("Kopiert"); };
+    try { navigator.clipboard.writeText(t.value).then(done, () => { t.select(); toast("Text markiert, jetzt kopieren"); }); }
+    catch (e) { t.select(); toast("Text markiert, jetzt kopieren"); }
+  });
+
+  let pickedText = "";
+  $("pickFile").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", function () {
+    const f = this.files && this.files[0]; this.value = "";
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { pickedText = String(r.result || ""); $("pickFile").textContent = "✓ " + f.name; $("pwIn").focus(); };
+    r.readAsText(f);
+  });
+  $("importForm").addEventListener("submit", async ev => {
+    ev.preventDefault(); err("importErr");
+    const text = pickedText || $("importText").value.trim();
+    if (!text) return err("importErr", "Bitte eine Datei wählen oder Text einfügen.");
+    if (!$("pwIn").value) return err("importErr", "Bitte das Passwort eingeben.");
+    busy("importBtn", true, "Entschlüssele …");
+    try {
+      const data = await decrypt(text, $("pwIn").value);
+      const inc = Array.isArray(data && data.entries) ? data.entries : null;
+      if (!inc) throw new Error("In der Sicherung sind keine Buchungen.");
+      let added = 0, updated = 0;
+      inc.forEach(x => {
+        if (!x || !x.id || !["in", "out", "adj"].includes(x.kind)) return;
+        const c = Math.round(Number(x.cents));
+        if (!Number.isFinite(c) || Math.abs(c) >= 1e9) return;
+        const clean = { id: String(x.id).slice(0, 40), kind: x.kind, cents: x.kind === "adj" ? c : Math.abs(c),
+          text: String(x.text || "").slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : today(), createdAt: Number(x.createdAt) || Date.now() };
+        const ex = entries.find(e => e.id === clean.id);
+        if (ex) { Object.assign(ex, clean); updated++; } else { entries.push(clean); added++; }
+      });
+      save(); render(); $("backupDlg").close();
+      toast(added + " neu, " + updated + " aktualisiert");
+    } catch (e) { err("importErr", e.message || "Das hat nicht geklappt."); }
+    busy("importBtn", false, "Wiederherstellen");
+    $("pwIn").value = "";
+  });
+
+  // ---------- Hinweis ----------
+  let tt;
+  function toast(msg, label, action) {
+    const t = $("toast"); t.replaceChildren(document.createTextNode(msg));
+    if (action) { const b = el("button", null, label); b.type = "button"; b.addEventListener("click", () => { action(); t.classList.remove("show"); clearTimeout(tt); }); t.append(b); }
+    t.classList.add("show"); clearTimeout(tt);
+    tt = setTimeout(() => t.classList.remove("show"), action ? 5000 : 2200);
+  }
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+  render();
+
+  // Offline-Betrieb, wenn eine sw.js daneben liegt (z. B. auf GitHub Pages)
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
